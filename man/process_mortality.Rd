@@ -54,7 +54,7 @@ For each variable in the metadata, the function performs the following tasks:
 library(data.table)
 library(jsonlite)
 
-# Assume `mortality_data` is your data and `metadata.json` is your metadata file
+# Assume `mortality_data` is your data and `metadata.json` is your metadata file path address
 processed_data <- process_mortality(mortality_data, "metadata.json", set_reference_year = 2020,
                                      var_maternal_mortality_cases = "icd_code_column")
 }
