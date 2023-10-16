@@ -1,46 +1,26 @@
----
-output: github_document
----
-
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
-)
-```
-
 # dataOPS
 
-<!-- badges: start -->
-<!-- badges: end -->
+Data Operations (OPS) in Health in the Americas (OPS/PAHO).
 
-The goal of dataOPS is to ...
+This is a package that contains health data processing routines for the Americas.
 
-## Installation
-
-You can install the development version of dataOPS from [GitHub](https://github.com/) with:
+## How to Install
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("daltonbc96/dataOPS")
 ```
 
-## Example
+## Process Mortality Data
 
-This is a basic example which shows you how to solve a common problem:
-
-```{r example}
-
+This function processes a given mortality dataset based on specified metadata json file, and optional parameters for handling reference year, and maternal mortality cases.
+```r
 library(dataOPS)
 library(data.table)
 library(jsonlite)
 
-# Assume `mortality_data` is your data and `metadata.json` is your metadata file path address
+# Assume `mortality_data` is your data and `metadata.json` is the address of the metadata file.
 processed_data <- process_mortality(mortality_data, "metadata.json", set_reference_year = 2020,
                                     var_maternal_mortality_cases = "icd_code_column")
 ```
-
+## Read Files
