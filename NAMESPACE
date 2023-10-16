@@ -2,6 +2,7 @@
 
 export(process_mortality)
 export(read_file)
+export(check_common_columns)
 
 importFrom(data.table, ":=")
 importFrom(data.table, "set")
