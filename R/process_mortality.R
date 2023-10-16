@@ -43,250 +43,244 @@
 #' \code{\link[jsonlite]{fromJSON}}, \code{\link[stringi]{stri_trans_general}},
 #' \code{\link[base]{as.Date}}, \code{\link[dplyr]{na_if}}
 #' @export
-process_mortality <- function(data, metadata_address, set_reference_year = NULL, var_maternal_mortality_cases = NULL) {
+process_mortality <-  function(data,
+                               metadata_address,
+                               set_reference_year = NULL,
+                               var_maternal_mortality_cases = NULL) {
+  load_json_as_list <- function(json_path) {
+    json_content <-
+      jsonlite::fromJSON(json_path, simplifyVector = FALSE)
+    return(json_content)
+  }
+  clean_string <- function(string) {
+    cleaned_string <- gsub("[[:punct:]&&[^(),.]]", "", string)
+    cleaned_string <-
+      stringi::stri_trans_general(cleaned_string, "Latin-ASCII")
+    cleaned_string <- tolower(cleaned_string)
+    return(cleaned_string)
+  }
 
-    load_json_as_list <- function(json_path) {
-      json_content <-
-        jsonlite::fromJSON(json_path, simplifyVector = FALSE)
-      return(json_content)
+
+  check_actual_type <- function(var_data, var_type) {
+    is_all_numeric <-
+      all(!is.na(as.numeric(as.character(
+        na.omit(var_data)
+      ))))
+
+    # If the data is already marked as categorical_numeric and all values are numeric
+    if (var_type == "categorical_numeric" && is_all_numeric) {
+      return("categorical_numeric")
+    } else {
+      # If there's any non-numeric value, treat as categorical_character
+      return("categorical_character")
+    }
+  }
+
+  process_date <- function(date_column) {
+    if (length(date_column) == 0) {
+      stop("date_column is empty")
     }
 
-    clean_string <- function(string) {
-      cleaned_string <- gsub("[[:punct:]&&[^(),.]]", "", string)
-      cleaned_string <-
-        stringi::stri_trans_general(cleaned_string, "Latin-ASCII")
-      cleaned_string <- tolower(cleaned_string)
-      return(cleaned_string)
-    }
+    # Initialize a vector to store the formatted dates
+    formatted_dates_final <-
+      rep(NA_character_, length(date_column))
 
-
-    check_actual_type <- function(var_data, var_type) {
-      is_all_numeric <-
-        all(!is.na(as.numeric(as.character(
-          na.omit(var_data)
-        ))))
-
-      # If the data is already marked as categorical_numeric and all values are numeric
-      if (var_type == "categorical_numeric" && is_all_numeric) {
-        return("categorical_numeric")
-      } else {
-        # If there's any non-numeric value, treat as categorical_character
-        return("categorical_character")
-      }
-    }
-
-    process_date <- function(date_column) {
-      if (length(date_column) == 0) {
-        stop("date_column is empty")
-      }
-
-      # Initialize a vector to store the formatted dates
-      formatted_dates_final <-
-        rep(NA_character_, length(date_column))
-
-      # Check the data type of the date column
-      if (inherits(date_column, "POSIXct")) {
-        # If the date column is POSIXct, format directly to the desired date string
-        formatted_dates_final <- format(date_column, "%d/%m/%Y")
-        return(formatted_dates_final)
-      } else {
-        first_value <-
-          as.character(na.omit(date_column)[1])  # Remove NA values and get the first value
-
-        # Check if the date format is "dd/mm/yyyy"
-        if (grepl("^\\d{2}/\\d{2}/\\d{4}$", first_value)) {
-          # If the date format is already correct, just return the date column as it is
-          return(as.character(date_column))
-        } else {
-          non_na_indices <- which(!is.na(date_column))
-          formatted_dates <-
-            sub(" UTC", "", as.character(date_column[non_na_indices]))
-          date_objects <-
-            as.Date(formatted_dates, format = "%Y-%m-%d")
-
-          if (any(is.na(date_objects))) {
-            if (!is.na(first_value) && nchar(first_value) > 8) {
-              # If character count is large, assume it's an SPSS date and process accordingly
-              formatted_dates_final[non_na_indices] <-
-                format(as.POSIXct(
-                  as.numeric(date_column[non_na_indices]),
-                  origin = "1582-10-14",
-                  tz = "GMT"
-                ),
-                "%d/%m/%Y")
-            } else {
-              # If character count is small, assume it's an Excel date and process accordingly
-              formatted_dates_final[non_na_indices] <-
-                format(as.Date(as.numeric(date_column[non_na_indices]), origin = "1899-12-30"),
-                       "%d/%m/%Y")
-            }
-          } else {
-            formatted_dates_final[non_na_indices] <-
-              format(date_objects, "%d/%m/%Y")
-          }
-        }
-      }
-
+    # Check the data type of the date column
+    if (inherits(date_column, "POSIXct")) {
+      # If the date column is POSIXct, format directly to the desired date string
+      formatted_dates_final <- format(date_column, "%d/%m/%Y")
       return(formatted_dates_final)
+    } else {
+      first_value <-
+        as.character(na.omit(date_column)[1])  # Remove NA values and get the first value
+
+      # Check if the date format is "dd/mm/yyyy"
+      if (grepl("^\\d{2}/\\d{2}/\\d{4}$", first_value)) {
+        # If the date format is already correct, just return the date column as it is
+        return(as.character(date_column))
+      } else {
+        non_na_indices <- which(!is.na(date_column))
+        formatted_dates <-
+          sub(" UTC", "", as.character(date_column[non_na_indices]))
+        date_objects <-
+          as.Date(formatted_dates, format = "%Y-%m-%d")
+
+        if (any(is.na(date_objects))) {
+          if (!is.na(first_value) && nchar(first_value) > 8) {
+            # If character count is large, assume it's an SPSS date and process accordingly
+            formatted_dates_final[non_na_indices] <-
+              format(as.POSIXct(
+                as.numeric(date_column[non_na_indices]),
+                origin = "1582-10-14",
+                tz = "GMT"
+              ),
+              "%d/%m/%Y")
+          } else {
+            # If character count is small, assume it's an Excel date and process accordingly
+            formatted_dates_final[non_na_indices] <-
+              format(as.Date(as.numeric(date_column[non_na_indices]), origin = "1899-12-30"),
+                     "%d/%m/%Y")
+          }
+        } else {
+          formatted_dates_final[non_na_indices] <-
+            format(date_objects, "%d/%m/%Y")
+        }
+      }
+    }
+
+    return(formatted_dates_final)
+  }
+
+
+  metadata <- load_json_as_list(metadata_address)
+
+  for (var_name in names(metadata)) {
+    var_data <- data[[var_name]]
+
+    # Check if the column exists in the data
+    if (!var_name %in% names(data)) {
+      warning(paste0(
+        "Variable ",
+        var_name,
+        " from metadata not found in data. Skipping..."
+      ))
+      next # Skip this iteration of the loop
     }
 
 
-    metadata <- load_json_as_list(metadata_address)
+    # Extract the type for this variable from metadata
+    var_type <- metadata[[var_name]]$type
 
-    for (var_name in names(metadata)) {
-      var_data <- data[[var_name]]
-
-      # Check if the column exists in the data
-      if (!var_name %in% names(data)) {
-        warning(paste0(
-          "Variable ",
-          var_name,
-          " from metadata not found in data. Skipping..."
-        ))
-        next # Skip this iteration of the loop
+    # Get the actual type of the variable from data, if it's a categorical variable
+    if (var_type %in% c("categorical_numeric", "categorical_character")) {
+      actual_type <- check_actual_type(var_data, var_type)
+      # If the actual type and metadata type don't match, use the actual type
+      if (var_type != actual_type) {
+        var_type <- actual_type
       }
+    }
 
+    # For character variables
+    if (!is.null(var_type) && var_type == "character") {
+      data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
+      data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
 
-      # Extract the type for this variable from metadata
-      var_type <- metadata[[var_name]]$type
+      data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
+    }
 
-      # Get the actual type of the variable from data, if it's a categorical variable
-      if (var_type %in% c("categorical_numeric", "categorical_character")) {
-        actual_type <- check_actual_type(var_data, var_type)
-        # If the actual type and metadata type don't match, use the actual type
-        if (var_type != actual_type) {
-          var_type <- actual_type
-        }
+    # For date variables
+    if (!is.null(var_type) && var_type == "date") {
+      # First preprocess the date using the process_date function
+      data[, (var_name) := process_date(.SD[[var_name]]), .SDcols = var_name]
+
+      # Then format it according to the provided format
+      if (!is.null(metadata[[var_name]]$format)) {
+        date_format <- metadata[[var_name]]$format
+        data[, (var_name) := as.Date(.SD[[var_name]], format = date_format), .SDcols = var_name]
+      } else {
+        next
       }
+    }
 
-      # For character variables
-      if (!is.null(var_type) && var_type == "character") {
-        data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
-        data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
+    # For time variables
+    if (!is.null(var_type) && var_type == "time") {
+      # Replace empty strings with NA
+      data[, (var_name) := ifelse(.SD[[var_name]] == "", NA, .SD[[var_name]]), .SDcols = var_name]
+      # Convert to time using hms::as_hms()
+      #data[, (var_name) := hms::as_hms(.SD[[var_name]]), .SDcols = var_name]
+      data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
+    }
 
-        data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
-      }
-
-      # For date variables
-      if (!is.null(var_type) && var_type == "date") {
-        # First preprocess the date using the process_date function
-        data[, (var_name) := process_date(.SD[[var_name]]), .SDcols = var_name]
-
-        # Then format it according to the provided format
-        if (!is.null(metadata[[var_name]]$format)) {
-          date_format <- metadata[[var_name]]$format
-          data[, (var_name) := as.Date(.SD[[var_name]], format = date_format), .SDcols = var_name]
-        } else {
-          next
-        }
-      }
-
-      # For time variables
-      if (!is.null(var_type) && var_type == "time") {
-        # Replace empty strings with NA
-        data[, (var_name) := ifelse(.SD[[var_name]] == "", NA, .SD[[var_name]]), .SDcols = var_name]
-        # Convert to time using hms::as_hms()
-        #data[, (var_name) := hms::as_hms(.SD[[var_name]]), .SDcols = var_name]
-        data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
-      }
-
-      # For numeric variables
-      if (!is.null(var_type) && var_type == "numeric") {
-        # If a missing value(s) is specified in the metadata, replace it with NA
-        if (!is.null(metadata[[var_name]]$missing)) {
-          missing_vals <- metadata[[var_name]]$missing
-          if (is.list(missing_vals)) {
-            # If multiple missing values are provided
-            for (missing_val in missing_vals) {
-              set(data,
-                  which(data[[var_name]] == missing_val),
-                  var_name,
-                  NA_real_)
-            }
-          } else {
-            # If a single missing value is provided
+    # For numeric variables
+    if (!is.null(var_type) && var_type == "numeric") {
+      # If a missing value(s) is specified in the metadata, replace it with NA
+      if (!is.null(metadata[[var_name]]$missing)) {
+        missing_vals <- metadata[[var_name]]$missing
+        if (is.list(missing_vals)) {
+          # If multiple missing values are provided
+          for (missing_val in missing_vals) {
             set(data,
-                which(data[[var_name]] == missing_vals),
+                which(data[[var_name]] == missing_val),
                 var_name,
                 NA_real_)
           }
-        }
-        data[, (var_name) := as.numeric(.SD[[var_name]]), .SDcols = var_name]
-      }
-
-
-      # For categorical_character variables
-      if (!is.null(var_type) &&
-          var_type == "categorical_character") {
-        data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
-        data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
-
-        # Convert to factor first
-        data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
-        # Clean each unique level
-        cleaned_levels <-
-          sapply(levels(data[[var_name]]), clean_string)
-        # Update the levels of the factor with cleaned levels
-        levels(data[[var_name]]) <- cleaned_levels
-
-        # Optionally merge identical levels (if any) after cleaning
-        data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
-      }
-
-      # For categorical_numeric variables
-      if (!is.null(var_type) && var_type == "categorical_numeric") {
-        # If labels are provided
-        if (!is.null(metadata[[var_name]]$labels)) {
-          labels <- metadata[[var_name]]$labels
-
-          # New: Process labels through clean_string
-          cleaned_labels <-
-            sapply(labels, clean_string, USE.NAMES = FALSE)
-
-          names(cleaned_labels) <-
-            names(labels)  # Preserve the original names after cleaning
-
-          all_levels <- na.omit(unique(var_data))
-          missing_labels <-
-            setdiff(all_levels, names(cleaned_labels))
-
-          # Add missing labels
-          for (ml in missing_labels) {
-            cleaned_labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
-          }
-
-          # Sort levels and labels by the order of appearance in data
-          ordered_levels <-
-            all_levels[order(match(all_levels, names(cleaned_labels)))]
-          ordered_cleaned_labels <- cleaned_labels[ordered_levels]
-
-          data[, (var_name) := factor(.SD[[var_name]], levels = ordered_levels, labels = ordered_cleaned_labels), .SDcols = var_name]
-
-          # Set label for NA values if applicable
-          if ("NA" %in% names(cleaned_labels)) {
-            levels(data[[var_name]])[is.na(levels(data[[var_name]]))] <-
-              cleaned_labels[["NA"]]
-          }
         } else {
-          data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
+          # If a single missing value is provided
+          set(data,
+              which(data[[var_name]] == missing_vals),
+              var_name,
+              NA_real_)
         }
       }
+      data[, (var_name) := as.numeric(.SD[[var_name]]), .SDcols = var_name]
+    }
 
 
+    # For categorical_character variables
+    if (!is.null(var_type) &&
+        var_type == "categorical_character") {
+      data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
+      data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
 
-      # Create a new variable 'maternal_mortality_cases' based on the provided criteria
-      if (!is.null(var_maternal_mortality_cases)) {
-        data[, maternal_mortality_cases := grepl("^A34", get(var_maternal_mortality_cases)) | grepl("^O", get(var_maternal_mortality_cases))]
-      }
+      # Convert to factor first
+      data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
+      # Clean each unique level
+      cleaned_levels <-
+        sapply(levels(data[[var_name]]), clean_string)
+      # Update the levels of the factor with cleaned levels
+      levels(data[[var_name]]) <- cleaned_levels
 
-      #Add the 'reference_year' variable with the specified value
-      if (!is.null(set_reference_year)) {
-        if (!"reference_year" %in% names(data) ||
-            is.null(data[["reference_year"]])) {
-          data[, ("reference_year") := set_reference_year]
+      # Optionally merge identical levels (if any) after cleaning
+      data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
+    }
+
+
+    # For categorical_numeric variables
+    if (!is.null(var_type) && var_type == "categorical_numeric") {
+      # If labels are provided
+      if (!is.null(metadata[[var_name]]$labels)) {
+        labels <- metadata[[var_name]]$labels
+        cleaned_labels <- sapply(names(labels), clean_string)
+        names(labels) <- cleaned_labels  # Update the names of the labels with cleaned strings
+
+        all_levels <- na.omit(unique(var_data))
+        missing_labels <- setdiff(all_levels, names(labels))
+
+        # Add missing labels
+        for (ml in missing_labels) {
+          labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
         }
-      }
 
-      return(data)
+        # Sort levels and labels by the order of appearance in data
+        ordered_levels <- all_levels[order(match(all_levels, names(labels)))]
+        ordered_labels <- labels[ordered_levels]
+
+        data[, (var_name) := factor(.SD[[var_name]], levels = ordered_levels, labels = ordered_labels), .SDcols = var_name]
+
+        # Set label for NA values if applicable
+        if ("NA" %in% names(labels)) {
+          levels(data[[var_name]])[is.na(levels(data[[var_name]]))] <- labels[["NA"]]
+        }
+      } else {
+        data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
+      }
+    }
+
+
+
+    if (!is.null(var_maternal_mortality_cases)) {
+      data[, maternal_mortality_cases := grepl("^A34", get(var_maternal_mortality_cases)) |
+             grepl("^O", get(var_maternal_mortality_cases))]
+    }
+
+    if (!is.null(set_reference_year)) {
+      if (!"reference_year" %in% names(data) ||
+          is.null(data[["reference_year"]])) {
+        data[, ("reference_year") := set_reference_year]
+      }
     }
   }
+
+  return(data)
+
+}
