@@ -41,18 +41,19 @@ read_file <- function(file_path, sheet = NULL, csv_encoding = "UTF-8") {
 
   } else if (extension == "dbf" | extension == "DBF") {
     df <- foreign::read.dbf(file_path, as.is = T)
-    df <- data.table::as.data.table(df)
 
   } else if (extension == "sav" | extension == "SAV") {
     df <- foreign::read.spss(file_path, to.data.frame = T, use.value.labels = F)
-    df <- data.table::as.data.table(df)
 
   } else if (extension == "xls" | extension == "XLS" | extension == "xlsx" | extension == "XLSX") {
     df <- readxl::read_excel(file_path, sheet = sheet)
-    df <- data.table::as.data.table(df)
 
   } else {
     stop("Unsupported file extension")
+  }
+
+  if (!is.data.table(df)) {
+    df <- data.table::as.data.table(df)
   }
 
   # Processamento centralizado
