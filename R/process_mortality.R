@@ -42,10 +42,7 @@
 #' @seealso
 #' \code{\link[jsonlite]{fromJSON}}, \code{\link[stringi]{stri_trans_general}},
 #' \code{\link[base]{as.Date}}, \code{\link[dplyr]{na_if}}
-#'
-library(data.table)
-library(jsonlite)
-
+#' @export
 process_mortality <- function(data, metadata_address, set_reference_year = NULL, var_maternal_mortality_cases = NULL) {
 
     load_json_as_list <- function(json_path) {
