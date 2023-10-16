@@ -44,7 +44,7 @@
 #' \code{\link[base]{as.Date}}, \code{\link[dplyr]{na_if}}
 #' @export
 process_mortality <- function(data, metadata_address, set_reference_year = NULL, var_maternal_mortality_cases = NULL) {
-   
+
     load_json_as_list <- function(json_path) {
       json_content <-
         jsonlite::fromJSON(json_path, simplifyVector = FALSE)
@@ -161,8 +161,8 @@ process_mortality <- function(data, metadata_address, set_reference_year = NULL,
 
       # For character variables
       if (!is.null(var_type) && var_type == "character") {
-        data[, (var_name) := na_if(.SD[[var_name]], ""), .SDcols = var_name]
-        data[, (var_name) := na_if(.SD[[var_name]], NA), .SDcols = var_name]
+        data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
+        data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
 
         data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
       }
