@@ -2,3 +2,16 @@
 
 export(process_mortality)
 export(read_file)
+
+importFrom(data.table, ":=")
+importFrom(data.table, "set")
+importFrom(data.table, "is.data.table")
+importFrom(data.table, "na_if")
+importFrom(stats, "na.omit")
+importFrom(utils, "head")
+
+import(readxl)
+import(foreign)
+import(stringr)
+import(data.table)
+import(jsonlite)
