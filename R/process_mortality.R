@@ -44,9 +44,10 @@
 #' \code{\link[base]{as.Date}}, \code{\link[dplyr]{na_if}}
 #' @export
 process_mortality <- function(data, metadata_address, set_reference_year = NULL, var_maternal_mortality_cases = NULL) {
-
+   
     load_json_as_list <- function(json_path) {
-      json_content <- jsonlite::fromJSON(json_path, simplifyVector = FALSE)
+      json_content <-
+        jsonlite::fromJSON(json_path, simplifyVector = FALSE)
       return(json_content)
     }
 
@@ -80,7 +81,8 @@ process_mortality <- function(data, metadata_address, set_reference_year = NULL,
       }
 
       # Initialize a vector to store the formatted dates
-      formatted_dates_final <- rep(NA_character_, length(date_column))
+      formatted_dates_final <-
+        rep(NA_character_, length(date_column))
 
       # Check the data type of the date column
       if (inherits(date_column, "POSIXct")) {
@@ -114,8 +116,9 @@ process_mortality <- function(data, metadata_address, set_reference_year = NULL,
                 "%d/%m/%Y")
             } else {
               # If character count is small, assume it's an Excel date and process accordingly
-              formatted_dates_final[non_na_indices] <- format(as.Date(as.numeric(date_column[non_na_indices]), origin = "1899-12-30"),
-                                                              "%d/%m/%Y")
+              formatted_dates_final[non_na_indices] <-
+                format(as.Date(as.numeric(date_column[non_na_indices]), origin = "1899-12-30"),
+                       "%d/%m/%Y")
             }
           } else {
             formatted_dates_final[non_na_indices] <-
@@ -213,7 +216,8 @@ process_mortality <- function(data, metadata_address, set_reference_year = NULL,
 
 
       # For categorical_character variables
-      if (!is.null(var_type) && var_type == "categorical_character") {
+      if (!is.null(var_type) &&
+          var_type == "categorical_character") {
         data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
         data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
 
@@ -234,46 +238,55 @@ process_mortality <- function(data, metadata_address, set_reference_year = NULL,
         # If labels are provided
         if (!is.null(metadata[[var_name]]$labels)) {
           labels <- metadata[[var_name]]$labels
+
+          # New: Process labels through clean_string
+          cleaned_labels <-
+            sapply(labels, clean_string, USE.NAMES = FALSE)
+
+          names(cleaned_labels) <-
+            names(labels)  # Preserve the original names after cleaning
+
           all_levels <- na.omit(unique(var_data))
-          missing_labels <- setdiff(all_levels, names(labels))
+          missing_labels <-
+            setdiff(all_levels, names(cleaned_labels))
 
           # Add missing labels
           for (ml in missing_labels) {
-            labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
+            cleaned_labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
           }
 
           # Sort levels and labels by the order of appearance in data
           ordered_levels <-
-            all_levels[order(match(all_levels, names(labels)))]
-          ordered_labels <- labels[ordered_levels]
+            all_levels[order(match(all_levels, names(cleaned_labels)))]
+          ordered_cleaned_labels <- cleaned_labels[ordered_levels]
 
-          data[, (var_name) := factor(.SD[[var_name]], levels = ordered_levels, labels = ordered_labels), .SDcols = var_name]
+          data[, (var_name) := factor(.SD[[var_name]], levels = ordered_levels, labels = ordered_cleaned_labels), .SDcols = var_name]
 
           # Set label for NA values if applicable
-          if ("NA" %in% names(labels)) {
+          if ("NA" %in% names(cleaned_labels)) {
             levels(data[[var_name]])[is.na(levels(data[[var_name]]))] <-
-              labels[["NA"]]
+              cleaned_labels[["NA"]]
           }
         } else {
           data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
         }
       }
-    }
 
 
-    # Create a new variable 'maternal_mortality_cases' based on the provided criteria
-    if (!is.null(var_maternal_mortality_cases)) {
-      data[, maternal_mortality_cases := grepl("^A34", get(var_maternal_mortality_cases)) |
-           grepl("^O", get(var_maternal_mortality_cases))]
-    }
 
-    #Add the 'reference_year' variable with the specified value
-    if (!is.null(set_reference_year)) {
-      if (!"reference_year" %in% names(data) ||
-          is.null(data[["reference_year"]])) {
-        data[, ("reference_year") := set_reference_year]
+      # Create a new variable 'maternal_mortality_cases' based on the provided criteria
+      if (!is.null(var_maternal_mortality_cases)) {
+        data[, maternal_mortality_cases := grepl("^A34", get(var_maternal_mortality_cases)) | grepl("^O", get(var_maternal_mortality_cases))]
       }
-    }
 
-    return(data)
+      #Add the 'reference_year' variable with the specified value
+      if (!is.null(set_reference_year)) {
+        if (!"reference_year" %in% names(data) ||
+            is.null(data[["reference_year"]])) {
+          data[, ("reference_year") := set_reference_year]
+        }
+      }
+
+      return(data)
+    }
   }

@@ -20,7 +20,14 @@ library(data.table)
 library(jsonlite)
 
 # Assume `mortality_data` is your data and `metadata.json` is the address of the metadata file.
-processed_data <- process_mortality(mortality_data, "metadata.json", set_reference_year = 2020,
+processed_data <- process_mortality(mortality_data, "path/metadata.json", set_reference_year = 2020,
                                     var_maternal_mortality_cases = "icd_code_column")
 ```
 ## Read Files
+This function reads files from a specified path and processes them into a data.table object.
+Supported file extensions include CSV, TXT, DBF, SAV, XLS, and XLSX.
+
+``` r
+# Assume `file_path` is the path to your file
+data <- read_file(file_path, sheet = 1)
+```
