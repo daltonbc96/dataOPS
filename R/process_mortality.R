@@ -1,4 +1,4 @@
-#' Process Mortality Function
+##' Process Mortality Function
 #'
 #' This function processes a given mortality dataset based on specified metadata json file,
 #' and optional parameters for handling reference year, and maternal mortality cases.
@@ -22,9 +22,12 @@
 #' For each variable in the metadata, the function performs the following tasks:
 #' - Checks if the variable exists in the data, skips the variable if not found.
 #' - Checks and adjusts the data type of the variable based on the metadata and actual data.
-#' - Processes character, date, time, numeric, and categorical variables based on specified rules and formats.
+#' - Processes character, date, time, numeric, categorical numeric, and categorical character-to-character variables based on specified rules and formats.
 #' - Optionally creates a new variable 'maternal_mortality_cases' based on specified criteria.
 #' - Optionally adds a 'reference_year' variable with a specified value.
+#'
+#' New with this version:
+#' - Added processing for the 'categorical_character_to_character' type, which maps character values to their corresponding labels.
 #'
 #' @return
 #' Returns the processed data as a data.table object.
@@ -266,6 +269,42 @@ process_mortality <-  function(data,
       }
     }
 
+
+    # For categorical_character_to_character
+    if (!is.null(var_type) && var_type == "categorical_character_to_character") {
+      # If labels are provided
+      if (!is.null(metadata[[var_name]]$labels)) {
+        labels <- metadata[[var_name]]$labels
+        cleaned_labels <- sapply(names(labels), clean_string)
+        names(labels) <- cleaned_labels  # Update the names of the labels with cleaned strings
+
+        all_original_levels <- na.omit(unique(var_data))
+        all_cleaned_levels <- sapply(all_original_levels, clean_string)
+
+        missing_labels <- setdiff(all_cleaned_levels, names(labels))
+
+        # Add missing labels
+        for (ml in missing_labels) {
+          labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
+        }
+
+        # Sort levels and labels by the order of appearance in data
+        ordered_levels <- all_cleaned_levels[order(match(all_cleaned_levels, names(labels)))]
+        ordered_labels <- labels[ordered_levels]
+
+        levels_mapping <- setNames(all_original_levels, all_cleaned_levels)
+        cleaned_var_data <- factor(var_data, levels = all_original_levels, labels = all_cleaned_levels)
+
+        data[, (var_name) := factor(cleaned_var_data, levels = ordered_levels, labels = ordered_labels)]
+
+        # Set label for NA values if applicable
+        if ("NA" %in% names(labels)) {
+          levels(data[[var_name]])[is.na(levels(data[[var_name]]))] <- labels[["NA"]]
+        }
+      } else {
+        data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
+      }
+    }
 
 
     if (!is.null(var_maternal_mortality_cases)) {
