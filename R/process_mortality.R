@@ -249,7 +249,7 @@ process_mortality <-  function(data,
 
         # Add missing labels
         for (ml in missing_labels) {
-          labels[ml] <- paste0("sin etiqueta para el valor ", ml)
+          labels[ml] <- paste0("Sin Etiqueta Para El Valor ", ml)
         }
 
         # Sort levels and labels by the order of appearance in data
@@ -283,7 +283,7 @@ process_mortality <-  function(data,
 
         # Add missing labels
         for (ml in missing_labels) {
-          labels[ml] <- paste0("sin etiqueta para el valor ", ml)
+          labels[ml] <- paste0("Sin Etiqueta Para El Valor ", ml)
         }
 
         # Sort levels and labels by the order of appearance in data
