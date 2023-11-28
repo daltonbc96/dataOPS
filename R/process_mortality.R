@@ -57,12 +57,10 @@ process_mortality <-  function(data,
   }
   clean_string <- function(string) {
     cleaned_string <- gsub("[[:punct:]&&[^(),.]]", "", string)
-    cleaned_string <-
-      stringi::stri_trans_general(cleaned_string, "Latin-ASCII")
-    cleaned_string <- tolower(cleaned_string)
+    cleaned_string <- stringi::stri_trans_general(cleaned_string, "Latin-ASCII")
+    cleaned_string <- tools::toTitleCase(cleaned_string)
     return(cleaned_string)
   }
-
 
   check_actual_type <- function(var_data, var_type) {
     is_all_numeric <-
@@ -251,7 +249,7 @@ process_mortality <-  function(data,
 
         # Add missing labels
         for (ml in missing_labels) {
-          labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
+          labels[ml] <- paste0("sin etiqueta para el valor ", ml)
         }
 
         # Sort levels and labels by the order of appearance in data
@@ -285,7 +283,7 @@ process_mortality <-  function(data,
 
         # Add missing labels
         for (ml in missing_labels) {
-          labels[ml] <- paste0("Sin etiqueta para el valor ", ml)
+          labels[ml] <- paste0("sin etiqueta para el valor ", ml)
         }
 
         # Sort levels and labels by the order of appearance in data
