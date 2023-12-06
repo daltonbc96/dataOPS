@@ -56,9 +56,11 @@ process_mortality <-  function(data,
     return(json_content)
   }
   clean_string <- function(string) {
-    cleaned_string <- gsub("[[:punct:]&&[^(),.]]", "", string)
+
+    cleaned_string <- stringi::stri_replace_all_regex(string, "[[:punct:]&&[^(),.]]", "")
     cleaned_string <- stringi::stri_trans_general(cleaned_string, "Latin-ASCII")
-    cleaned_string <- tools::toTitleCase(cleaned_string)
+    cleaned_string <- tolower(cleaned_string)
+    cleaned_string <- stringr::str_to_title(cleaned_string)
     return(cleaned_string)
   }
 
@@ -132,6 +134,19 @@ process_mortality <-  function(data,
     return(formatted_dates_final)
   }
 
+  apply_clean_string <- function(column) {
+    unique_values <- unique(na.omit(column))
+    cleaned_values <- sapply(unique_values, clean_string)
+    return(factor(column, levels = unique_values, labels = cleaned_values))
+  }
+
+  clean_factor_levels <- function(factor_column) {
+    cleaned_levels <- sapply(levels(factor_column), clean_string)
+    levels(factor_column) <- cleaned_levels
+    return(factor_column)
+  }
+
+
 
   metadata <- load_json_as_list(metadata_address)
 
@@ -166,7 +181,7 @@ process_mortality <-  function(data,
       data[, (var_name) := dplyr::na_if(.SD[[var_name]], ""), .SDcols = var_name]
       data[, (var_name) := dplyr::na_if(.SD[[var_name]], NA), .SDcols = var_name]
 
-      data[, (var_name) := as.character(.SD[[var_name]]), .SDcols = var_name]
+      data[, (var_name) := apply_clean_string(.SD[[var_name]]), .SDcols = var_name]
     }
 
     # For date variables
@@ -225,11 +240,8 @@ process_mortality <-  function(data,
 
       # Convert to factor first
       data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
-      # Clean each unique level
-      cleaned_levels <-
-        sapply(levels(data[[var_name]]), clean_string)
-      # Update the levels of the factor with cleaned levels
-      levels(data[[var_name]]) <- cleaned_levels
+
+      data[, (var_name) := clean_factor_levels(factor(.SD[[var_name]])), .SDcols = var_name]
 
       # Optionally merge identical levels (if any) after cleaning
       data[, (var_name) := factor(.SD[[var_name]]), .SDcols = var_name]
